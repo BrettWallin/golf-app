@@ -1,133 +1,139 @@
 import * as React from 'react';
-import PropTypes from 'prop-types';
-import Box from '@mui/material/Box';
-import Collapse from '@mui/material/Collapse';
-import IconButton from '@mui/material/IconButton';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp';
-
-function createData(clubType, club) {
-  return {
-    clubType,
-    club,
-    history: [
-      {
-        date: '2020-01-05',
-        customerId: '11091700',
-        amount: 3,
-      },
-      {
-        date: '2020-01-02',
-        customerId: 'Anonymous',
-        amount: 1,
-      },
-    ],
-  };
-}
-
-function Row(props) {
-  const { row } = props;
-  const [open, setOpen] = React.useState(false);
-
-  return (
-    <React.Fragment>
-      <TableRow sx={{ '& > *': { borderBottom: 'unset' } }}>
-        <TableCell>
-          <IconButton
-            aria-label="expand row"
-            size="small"
-            onClick={() => setOpen(!open)}
-          >
-            {open ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
-          </IconButton>
-        </TableCell>
-        <TableCell component="th" scope="row">
-          {row.clubType}
-        </TableCell>
-        <TableCell>{row.club}</TableCell>
-      </TableRow>
-      <TableRow>
-        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={6}>
-          <Collapse in={open} timeout="auto" unmountOnExit>
-            <Box sx={{ margin: 1 }}>
-              <Typography variant="h6" gutterBottom component="div">
-                History
-              </Typography>
-              <Table size="small" aria-label="purchases">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Date</TableCell>
-                    <TableCell>Customer</TableCell>
-                    <TableCell align="right">Amount</TableCell>
-                    <TableCell align="right">Total price ($)</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {row.history.map((historyRow) => (
-                    <TableRow key={historyRow.date}>
-                      <TableCell component="th" scope="row">
-                        {historyRow.date}
-                      </TableCell>
-                      <TableCell>{historyRow.customerId}</TableCell>
-                      <TableCell align="right">{historyRow.amount}</TableCell>
-                      <TableCell align="right">
-                        {Math.round(historyRow.amount * row.price * 100) / 100}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Box>
-          </Collapse>
-        </TableCell>
-      </TableRow>
-    </React.Fragment>
-  );
-}
-
-Row.propTypes = {
-  row: PropTypes.shape({
-    club: PropTypes.number.isRequired,
-    history: PropTypes.arrayOf(
-      PropTypes.shape({
-        amount: PropTypes.number.isRequired,
-        customerId: PropTypes.string.isRequired,
-        date: PropTypes.string.isRequired,
-      }),
-    ).isRequired,
-    clubType: PropTypes.string.isRequired,
-  }).isRequired,
-};
-
-const rows = [
-  createData('Driver', 'Taylormade Sim')
-];
+import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
+import DeleteIcon from '@mui/icons-material/Delete';
+import Checkbox from '@mui/material/Checkbox';
+import { SelectedClubsContext } from '../Components/SelectedClubsContext'; // Import the context
 
 export default function SetTable() {
+  const { selectedClubs, removeClub } = React.useContext(SelectedClubsContext); // Use the context
+  const [selected, setSelected] = React.useState([]);
+
+  const handleSelectAllClick = (event) => {
+    if (event.target.checked) {
+      const newSelected = selectedClubs.map((club) => club.club);
+      setSelected(newSelected);
+      return;
+    }
+    setSelected([]);
+  };
+
+  const handleClick = (event, club) => {
+    const selectedIndex = selected.indexOf(club);
+    let newSelected = [];
+
+    if (selectedIndex === -1) {
+      newSelected = newSelected.concat(selected, club);
+    } else if (selectedIndex === 0) {
+      newSelected = newSelected.concat(selected.slice(1));
+    } else if (selectedIndex === selected.length - 1) {
+      newSelected = newSelected.concat(selected.slice(0, -1));
+    } else if (selectedIndex > 0) {
+      newSelected = newSelected.concat(
+        selected.slice(0, selectedIndex),
+        selected.slice(selectedIndex + 1)
+      );
+    }
+    setSelected(newSelected);
+  };
+
+  const handleRemoveSelected = () => {
+    selected.forEach((club) => {
+      const clubToRemove = selectedClubs.find((c) => c.club === club);
+      if (clubToRemove) {
+        removeClub(clubToRemove);
+      }
+    });
+    setSelected([]);
+  };
+
+  const isSelected = (club) => selected.indexOf(club) !== -1;
+
   return (
     <TableContainer component={Paper}>
-      <Table aria-label="collapsible table">
+      <Table aria-label="selected clubs table">
         <TableHead>
           <TableRow>
-            <TableCell />
-            <TableCell>Club Type</TableCell>
+            <TableCell padding="checkbox">
+              <Checkbox
+                color="primary"
+                indeterminate={selected.length > 0 && selected.length < selectedClubs.length}
+                checked={selectedClubs.length > 0 && selected.length === selectedClubs.length}
+                onChange={handleSelectAllClick}
+                inputProps={{ 'aria-label': 'select all clubs' }}
+              />
+            </TableCell>
             <TableCell>Club</TableCell>
+            <TableCell align="right">Hand</TableCell>
+            <TableCell align="right">Loft</TableCell>
+            <TableCell align="right">Material</TableCell>
+            <TableCell align="right">Price</TableCell>
+            <TableCell align="right">Actions</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {rows.map((row) => (
-            <Row key={row.club} row={row} />
-          ))}
+          {selectedClubs.map((club) => {
+            const isItemSelected = isSelected(club.club);
+            const labelId = `set-table-checkbox-${club.club}`;
+
+            return (
+              <TableRow
+                hover
+                onClick={(event) => handleClick(event, club.club)}
+                role="checkbox"
+                aria-checked={isItemSelected}
+                tabIndex={-1}
+                key={club.club}
+                selected={isItemSelected}
+              >
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    color="primary"
+                    checked={isItemSelected}
+                    inputProps={{ 'aria-labelledby': labelId }}
+                  />
+                </TableCell>
+                <TableCell component="th" id={labelId} scope="row">
+                  {club.club}
+                </TableCell>
+                <TableCell align="right">{club.hand}</TableCell>
+                <TableCell align="right">{club.loft}</TableCell>
+                <TableCell align="right">{club.material}</TableCell>
+                <TableCell align="right">{club.price}</TableCell>
+                <TableCell align="right">
+                  <Tooltip title="Remove">
+                    <IconButton
+                      color="secondary"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        removeClub(club);
+                      }}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Tooltip>
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
+      <Tooltip title="Remove Selected">
+        <IconButton
+          color="secondary"
+          onClick={handleRemoveSelected}
+          disabled={selected.length === 0}
+        >
+          <DeleteIcon />
+        </IconButton>
+      </Tooltip>
     </TableContainer>
   );
 }

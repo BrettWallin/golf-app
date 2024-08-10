@@ -19,8 +19,8 @@ import Tooltip from '@mui/material/Tooltip';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { visuallyHidden } from '@mui/utils';
+import { SelectedClubsContext } from '../Components/SelectedClubsContext';
 
-// Define the columns for the table
 const headCells = [
   { id: 'club', numeric: false, disablePadding: true, label: 'Club' },
   { id: 'hand', numeric: true, disablePadding: false, label: 'Hand' },
@@ -31,33 +31,32 @@ const headCells = [
 
 // Function to get comparator for sorting
 function getComparator(order, orderBy) {
-    return order === 'desc'
-      ? (a, b) => descendingComparator(a, b, orderBy)
-      : (a, b) => -descendingComparator(a, b, orderBy);
+  return order === 'desc'
+    ? (a, b) => descendingComparator(a, b, orderBy)
+    : (a, b) => -descendingComparator(a, b, orderBy);
+}
+
+// Function to compare rows based on a specific key
+function descendingComparator(a, b, orderBy) {
+  if (b[orderBy] < a[orderBy]) {
+    return -1;
   }
-  
-  // Function to compare rows based on a specific key
-  function descendingComparator(a, b, orderBy) {
-    if (b[orderBy] < a[orderBy]) {
-      return -1;
-    }
-    if (b[orderBy] > a[orderBy]) {
-      return 1;
-    }
-    return 0;
+  if (b[orderBy] > a[orderBy]) {
+    return 1;
   }
-  
-  // Function to sort rows
-  function stableSort(array, comparator) {
-    const stabilizedThis = array.map((el, index) => [el, index]);
-    stabilizedThis.sort((a, b) => {
-      const order = comparator(a[0], b[0]);
-      if (order !== 0) return order;
-      return a[1] - b[1];
-    });
-    return stabilizedThis.map((el) => el[0]);
-  }
-  
+  return 0;
+}
+
+// Function to sort rows
+function stableSort(array, comparator) {
+  const stabilizedThis = array.map((el, index) => [el, index]);
+  stabilizedThis.sort((a, b) => {
+    const order = comparator(a[0], b[0]);
+    if (order !== 0) return order;
+    return a[1] - b[1];
+  });
+  return stabilizedThis.map((el) => el[0]);
+}
 
 function EnhancedTableHead(props) {
   const { onSelectAllClick, order, orderBy, numSelected, rowCount, onRequestSort } = props;
@@ -74,7 +73,7 @@ function EnhancedTableHead(props) {
             indeterminate={numSelected > 0 && numSelected < rowCount}
             checked={rowCount > 0 && numSelected === rowCount}
             onChange={onSelectAllClick}
-            inputProps={{ 'aria-label': 'select all desserts' }}
+            inputProps={{ 'aria-label': 'select all clubs' }}
           />
         </TableCell>
         {headCells.map((headCell) => (
@@ -148,7 +147,7 @@ function EnhancedTableToolbar(props) {
       {numSelected > 0 ? (
         <Tooltip title="Add">
           <IconButton>
-            <AddCircleIcon />
+            
           </IconButton>
         </Tooltip>
       ) : (
@@ -173,6 +172,7 @@ export default function ProductTable({ rows }) {
   const [page, setPage] = React.useState(0);
   const [dense, setDense] = React.useState(false);
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
+  const { addClub } = React.useContext(SelectedClubsContext); // Use the context
 
   const handleRequestSort = (event, property) => {
     const isAsc = orderBy === property && order === 'asc';
@@ -206,6 +206,11 @@ export default function ProductTable({ rows }) {
       );
     }
     setSelected(newSelected);
+  };
+
+  const handleAddSelected = () => {
+    selected.forEach((club) => addClub(rows.find(row => row.club === club)));
+    setSelected([]);
   };
 
   const handleChangePage = (event, newPage) => {
@@ -309,7 +314,20 @@ export default function ProductTable({ rows }) {
           onPageChange={handleChangePage}
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
+        <Tooltip title="Add Selected to Buy Set">
+          <IconButton
+            color="primary"
+            onClick={handleAddSelected}
+            disabled={selected.length === 0}
+          >
+            <AddCircleIcon />
+          </IconButton>
+        </Tooltip>
       </Paper>
     </Box>
   );
 }
+
+ProductTable.propTypes = {
+  rows: PropTypes.array.isRequired,
+};
